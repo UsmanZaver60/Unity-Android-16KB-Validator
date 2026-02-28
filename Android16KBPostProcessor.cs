@@ -10,6 +10,7 @@ namespace UZaver
     public class Android16KBPostProcessor : IPostprocessBuildWithReport
     {
         public int callbackOrder => 1000;
+        private bool _is16KbCompatibleLibs = true;
 
         public void OnPostprocessBuild(BuildReport report)
         {
@@ -27,8 +28,7 @@ namespace UZaver
             string aabName = Path.GetFileNameWithoutExtension(outputPath);
             string tempDir = Path.Combine(aabDir, aabName + "_Extracted");
 
-            if (Directory.Exists(tempDir))
-                Directory.Delete(tempDir, true);
+            DeleteDirectory(tempDir);
 
             Directory.CreateDirectory(tempDir);
 
@@ -43,8 +43,8 @@ namespace UZaver
             if (!Directory.Exists(libRoot))
             {
                 Debug.LogError("No native libraries found in AAB.");
-                if (Directory.Exists(tempDir))
-                    Directory.Delete(tempDir, true);
+                DeleteDirectory(tempDir);
+
                 return;
             }
 
@@ -54,16 +54,14 @@ namespace UZaver
                 if (!Is16KbCompatible(so, readlELFPath))
                 {
                     Debug.LogError($"16KB PAGE CHECK FAILED {so}");
-                    if (Directory.Exists(tempDir))
-                        Directory.Delete(tempDir, true);
-                    return;
+                    _is16KbCompatibleLibs = false;
                 }
             }
 
-            Debug.Log("✅ 16KB validation PASSED: All native libraries are compatible.");
+            if(_is16KbCompatibleLibs)
+                Debug.Log("✅ 16KB validation PASSED: All native libraries are compatible.");
             
-            if (Directory.Exists(tempDir))
-                Directory.Delete(tempDir, true);
+            DeleteDirectory(tempDir);
         }
 
         // ---------- Helpers ----------
@@ -156,15 +154,20 @@ namespace UZaver
             {
                 if (!line.Contains("LOAD"))
                     continue;
-
-                // Last column is p_align
                 string[] tokens = line.Trim().Split(' ', System.StringSplitOptions.RemoveEmptyEntries);
+                if(tokens.Length < 1)
+                    continue;
                 string align = tokens[^1];
 
-                if (align == "0x1000") // 4KB → FAIL
+                if (align.Equals("0x1000", System.StringComparison.OrdinalIgnoreCase))
                     return false;
             }
             return true;
+        }
+        private void DeleteDirectory(string directory)
+        {
+            if (Directory.Exists(directory))
+                Directory.Delete(directory, true);
         }
     }
 }
