@@ -1,67 +1,81 @@
 # Unity Android 16KB Page Size Validator
 
-Google Play requires apps targeting Android 15 (API 35)+ to support 16KB memory page sizes.
+Unity post-build validator that scans Android App Bundles (AAB) to ensure native libraries are 16KB page-size compliant for Google Play (Android 15+ requirement).
 
-This repository provides a Unity Post-Build Processor that automatically validates whether all native .so libraries inside a generated Android App Bundle (AAB) are aligned for 16KB page support.
+---
 
-## What It Does
+## 🧪 Tested Environment
+
+- **Unity Version:** 2022.3.62f3 (LTS)
+- **Platform:** Windows
+- **Build Type:** Android App Bundle (AAB)
+- **NDK:** Unity bundled NDK
+
+---
+
+## 🔍 What It Does
 
 After building an Android App Bundle, the script:
 
-Extracts the generated .aab
+- Extracts the generated `.aab`
+- Locates all native `.so` libraries under `base/lib`
+- Runs `readelf -l`
+- Checks ELF `LOAD` segment alignment
+- Logs an error if 4KB (`0x1000`) alignment is detected
 
-Locates all native .so libraries under base/lib
+---
 
-Uses readelf -l from Unity’s bundled NDK
+## 🎯 Why This Matters
 
-Scans ELF LOAD segments
+Google Play requires apps targeting Android 15+ to support 16KB page sizes.
 
-Detects 4KB (0x1000) alignment
+Older SDKs, native plugins, or AAR dependencies may still use 4KB alignment, which can result in Play Console submission rejection.
 
-Logs errors if non-compliant libraries are found
+This validator helps catch the issue immediately after build.
 
-This helps prevent Google Play submission failures caused by legacy or third-party native plugins.
+---
 
 ## 🛠 How To Use
 
-Place Android16KBPostProcessor.cs inside an Editor folder in your Unity project.
+1. Place `Android16KBPostProcessor.cs` inside an `Editor` folder.
+2. Enable **Build App Bundle (AAB)** in Unity Android settings.
+3. Build the project.
+4. Validation runs automatically after build.
 
-Enable Build App Bundle (AAB) in Android Build Settings.
-
-Build your project.
-
-The script automatically runs post-build validation.
-
-If any native library is 4KB-aligned, the console will log an error.
+---
 
 ## 🖥 Platform Support
 
-⚠ Windows Only
+⚠ **Windows Only**
 
-This implementation currently:
+This implementation:
 
-Uses PowerShell Expand-Archive for AAB extraction
+- Uses PowerShell `Expand-Archive` for AAB extraction
+- Searches for `readelf.exe` inside Unity’s bundled NDK
 
-Searches for readelf.exe inside Unity’s bundled NDK
+macOS and Linux environments are not currently supported.
 
-It has not been adapted for macOS or Linux environments.
+---
 
 ## 📌 Requirements
 
-Unity with Android module installed
+- Unity 2022.3.62f3 (tested)
+- Android module installed
+- Unity bundled NDK
+- Windows environment
+- AAB build enabled
 
-Unity bundled Android NDK
-
-Windows environment
-
-Android App Bundle build enabled
+---
 
 ## ⚠ Known Limitations
 
-Windows-only (due to PowerShell extraction)
+- Windows only
+- Logs error instead of failing the Unity build
+- Assumes `readelf` exists in Unity’s bundled NDK
+- Validates final AAB only (not intermediate Gradle outputs)
 
-Does not currently fail the Unity build (logs error instead)
+---
 
-Assumes readelf exists inside Unity’s bundled NDK
+## 📄 License
 
-Validates final AAB only (not intermediate Gradle outputs)
+MIT License
